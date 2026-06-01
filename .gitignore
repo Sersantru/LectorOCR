@@ -1,0 +1,11 @@
+# Entorno virtual Python
+venv/
+
+# Fuentes de instalación de torchvision (no forman parte del proyecto)
+torchvision_src/
+
+# Artefactos locales
+__pycache__/
+*.py[cod]
+.env
+*.swp

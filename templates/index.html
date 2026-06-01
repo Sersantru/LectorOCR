@@ -1,0 +1,69 @@
+<html>
+    <head>
+        <title>Front Matrículas</title>
+        <style>
+            body { background-color: #111; text-align: center; color: white; font-family: sans-serif; }
+            #contenedor { position: relative; display: inline-block; margin-top: 20px; width: 1280px; height: 720px; }
+            #video-fondo { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; border: 2px solid #333; }
+            #lienzo { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+            .controles { margin-top: 15px; position: relative; z-index: 10; }
+            .btn-refresco { background-color: #ff3333; color: white; border: none; padding: 10px 20px; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 5px; }
+            .btn-refresco:hover { background-color: #ff5555; }
+        </style>
+    </head>
+    <body>
+        <h1>Vídeo directo (8123) + IA Síncrona (8181)</h1>
+        <div id="contenedor">
+            <img id="video-fondo" src="{{ url_camara }}">
+            <canvas id="lienzo" width="1280" height="720"></canvas>
+        </div>
+        <div class="controles">
+            <button class="btn-refresco" onclick="recolectarCamara()">🔄 FORZAR RECONEXIÓN VISUAL</button>
+        </div>
+
+        <script>
+            const video = document.getElementById('video-fondo');
+            const canvas = document.getElementById('lienzo');
+            const ctx = canvas.getContext('2d');
+
+            const BASE_URL_CAMARA = '{{ url_camara }}';
+            let matriculas = [];
+
+            function recolectarCamara() {
+                video.src = BASE_URL_CAMARA + "?t=" + new Date().getTime();
+            }
+
+            function dibujarRecuadros() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 4;
+                ctx.font = 'bold 20px Arial';
+                ctx.fillStyle = '#00ff00';
+
+                matriculas.forEach(box => {
+                    const [x1, y1, x2, y2, conf] = box;
+                    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                    ctx.fillText(`Matrícula: ${(conf * 100).toFixed(0)}%`, x1, y1 - 10);
+                });
+                requestAnimationFrame(dibujarRecuadros);
+            }
+
+            async function pedirCoordenadas() {
+                try {
+                    // Pide los datos directamente a su propio servidor backend
+                    const respuesta = await fetch('/coordenadas');
+                    if (respuesta.ok) {
+                        matriculas = await respuesta.json();
+                    }
+                } catch (error) {
+                    console.error("Error obteniendo coordenadas:", error);
+                }
+                setTimeout(pedirCoordenadas, 25);
+            }
+
+            setInterval(recolectarCamara, 30000);
+            pedirCoordenadas();
+            dibujarRecuadros();
+        </script>
+    </body>
+</html>
