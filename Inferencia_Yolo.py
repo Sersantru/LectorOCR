@@ -67,25 +67,26 @@ def coordenadas():
     # Restringimos que YOLOv8 procese solo cada 150 milisegundos (evita saturar la GPU)
     if ahora - ultima_vez_ia > 0.15:
         with lock:
-            if frame_actual is None:
-                return jsonify(coordenadas_guardadas)
-            
-            # Segunda zona crítica contra el Segmentation Fault: leemos de la copia
-            frame_ia = frame_actual.copy()
-            
-        ultima_vez_ia = ahora
-        
-        # Inferencia con umbral 0.15 para cazar matrículas en movimiento
-        results = model.predict(frame_ia, verbose=False, conf=0.15)
-        
-        nuevas_cajas = []
-        for result in results:
-            for box in result.boxes:
-                x1, y1, x2, y2 = box.xyxy[0].tolist()
-                conf = float(box.conf[0])
-                nuevas_cajas.append([int(x1), int(y1), int(x2), int(y2), conf])
-        
-        coordenadas_guardadas = nuevas_cajas
+            if time.time() - ultima_vez_ia > 0.15:
+                if frame_actual is None:
+                    return jsonify(coordenadas_guardadas)
+                
+                # Segunda zona crítica contra el Segmentation Fault: leemos de la copia
+                frame_ia = frame_actual.copy()
+                
+                ultima_vez_ia = ahora
+                
+                # Inferencia con umbral 0.15 para cazar matrículas en movimiento
+                results = model.predict(frame_ia, verbose=False, conf=0.15)
+                
+                nuevas_cajas = []
+                for result in results:
+                    for box in result.boxes:
+                        x1, y1, x2, y2 = box.xyxy[0].tolist()
+                        conf = float(box.conf[0])
+                        nuevas_cajas.append([int(x1), int(y1), int(x2), int(y2), conf])
+                
+                coordenadas_guardadas = nuevas_cajas
 
     # Retorno sin latencia
     return jsonify(coordenadas_guardadas)
