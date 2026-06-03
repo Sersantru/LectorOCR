@@ -3,6 +3,7 @@ from pathlib import Path
 import cv2
 from flask import Flask, jsonify, render_template, request
 from ultralytics import YOLO
+from Procesado_OCR import OcrProcesador
 import threading
 import time
 
@@ -17,7 +18,7 @@ MODEL_PATH = Path(__file__).resolve().parent / "modelo-detector-matricula.pt"
 
 # Inicialización de YOLOv8
 model = YOLO(str(MODEL_PATH))
-
+ocr_engine = OcrProcesador() # <--- Se carga una vez
 # Variables globales compartidas de forma segura
 lock = threading.Lock()
 frame_actual = None
@@ -82,13 +83,25 @@ def coordenadas():
                 
                 # Inferencia con umbral 0.15 para cazar matrículas en movimiento
                 results = model.predict(frame_ia, verbose=False, conf=0.15)
+                # results = model.track(frame_ia, persist=True, tracker="bytetrack.yaml", verbose=False, conf=0.15, device="cuda")
                 
                 nuevas_cajas = []
                 for result in results:
                     for box in result.boxes:
                         x1, y1, x2, y2 = box.xyxy[0].tolist()
                         conf = float(box.conf[0])
-                        nuevas_cajas.append([int(x1), int(y1), int(x2), int(y2), conf])
+                        
+                        # --- INTEGRACIÓN OCR ---
+                        # Solo recortamos si la confianza es decente
+                        if conf > 0.2: 
+                            recorte = frame_ia[int(y1):int(y2), int(x1):int(x2)]
+                            texto = ocr_engine.leer_matricula(recorte)
+                        else:
+                            texto = ""
+                        # -----------------------
+
+
+                        nuevas_cajas.append([int(x1), int(y1), int(x2), int(y2), conf, texto])
                 
                 coordenadas_guardadas = nuevas_cajas
 
