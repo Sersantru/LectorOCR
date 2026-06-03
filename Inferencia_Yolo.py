@@ -6,6 +6,10 @@ from ultralytics import YOLO
 import threading
 import time
 
+import easyocr
+import torch
+import gc
+
 app = Flask(__name__)
 
 CAMERA_URL = "http://192.168.150.244:8123/video"
@@ -87,6 +91,11 @@ def coordenadas():
                         nuevas_cajas.append([int(x1), int(y1), int(x2), int(y2), conf])
                 
                 coordenadas_guardadas = nuevas_cajas
+
+                # LIMPIEZA DE MEMORIA POST-INFERENCIA
+                del results
+                torch.cuda.empty_cache()
+                gc.collect()
 
     # Retorno sin latencia
     return jsonify(coordenadas_guardadas)
